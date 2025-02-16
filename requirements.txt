@@ -1,3 +1,9 @@
-openai
-duckduckgo-search
-phidata
+streamlit
+opencv-python
+numpy
+Pillow
+llama-index
+groq
+mediapipe
+python-dotenv
+facenet-pytorch
