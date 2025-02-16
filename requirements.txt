@@ -11,3 +11,4 @@ llama-index-llms-groq
 torch 
 torchvision 
 torchaudio
+python-dotenv
