@@ -8,4 +8,6 @@ mediapipe
 python-dotenv
 facenet-pytorch
 llama-index-llms-groq
-
+torch 
+torchvision 
+torchaudio
