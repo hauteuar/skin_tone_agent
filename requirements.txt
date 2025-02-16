@@ -7,3 +7,5 @@ groq
 mediapipe
 python-dotenv
 facenet-pytorch
+llama-index-llms-groq
+
