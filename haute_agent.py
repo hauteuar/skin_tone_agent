@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit.components.v1 import html
 import os
 import cv2
 import numpy as np
@@ -10,74 +9,93 @@ import mediapipe as mp
 from dotenv import load_dotenv
 from facenet_pytorch import MTCNN
 
-# Custom styling
+# Page config
 st.set_page_config(
-    page_title="Haute-U AR Technologies",
+    page_title="Haute-U AR",
     page_icon="👗",
     layout="wide"
 )
 
-# Custom CSS (Combined for single tab)
+# Minimalist CSS
 st.markdown("""
     <style>
     .stApp {
-        background: linear-gradient(135deg, #fff5f7 0%, #fff0f7 100%);
+        background-color: #ffffff;
     }
     .main {
-        background-color: rgba(255,255,255,0.9);
-        padding: 2rem;
-        border-radius: 20px;
+        background-color: #ffffff;
+        padding: 1rem;
     }
     .stButton>button {
-        background-color: #FF1493;
+        background-color: #000000;
         color: white;
-        border-radius: 20px;
-        padding: 0.5rem 2rem;
+        border-radius: 4px;
+        padding: 0.5rem 1.5rem;
         border: none;
     }
     .stButton>button:hover {
-        background-color: #FF69B4;
+        background-color: #333333;
     }
     .uploadedFile {
-        border: 2px dashed #FF1493;
-        border-radius: 10px;
-        padding: 10px;
+        border: 1px solid #000000;
+        border-radius: 4px;
+        padding: 8px;
     }
     h1, h2, h3 {
-        color: #FF1493;
+        color: #000000;
         font-family: 'Helvetica Neue', sans-serif;
     }
     .chat-message {
-        padding: 1rem;
-        border-radius: 10px;
+        padding: 0.8rem;
+        border-radius: 4px;
         margin: 0.5rem 0;
     }
     .user-message {
-        background-color: #FFE4E1;
+        background-color: #f5f5f5;
     }
     .ai-message {
-        background-color: #FFF0F5;
+        background-color: #f0f0f0;
     }
-    .nav-button {  /* Style for the "Fashion Consultation" button */
-        background-color: #FF1493;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 10px 20px; /* Adjust padding as needed */
-        margin: 10px auto; /* Center the button */
-        display: block; /* Make it a block element */
-        width: fit-content; /* Make the width fit the content */
+    .reset-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
     }
-
-    .nav-button:hover {
-        background-color: #FF69B4;
+    .header-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 2rem;
     }
-
+    .header-container img {
+        margin-bottom: 0 !important;
+    }
+    .header-container h1 {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Main content area (No Sidebar)
-st.markdown('<div class="main">', unsafe_allow_html=True)  # Added "main" class
+# Initialize session state
+if 'image_uploaded' not in st.session_state:
+    st.session_state.image_uploaded = False
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+# Reset function
+def reset_chat():
+    st.session_state.image_uploaded = False
+    st.session_state.chat_history = []
+    st.session_state.skin_analysis = None
+    st.session_state.marked_image = None
+    st.rerun()
+
+# Add reset button
+if st.session_state.image_uploaded:
+    if st.button("New Analysis", key="reset", help="Start a new analysis"):
+        reset_chat()
 
 # Load environment variables and initialize APIs
 load_dotenv()
@@ -173,74 +191,83 @@ def get_skin_analysis(image):
 def get_fashion_recommendations(skin_analysis, user_query=None):
     """Generate fashion advice based on skin analysis and user input."""
     base_prompt = f"""
-    You are a luxury fashion consultant. Provide color and style recommendations based on this skin analysis:
+    As a luxury fashion consultant, provide concise recommendations based on this skin analysis:
     
     {skin_analysis}
 
-    Suggestions should include:
-    - Most flattering colors
-    - Clothing styles and accessories
-    - Makeup recommendations
-    - Seasonal trends
-
-    If the client has a specific question, focus on that:
-    {user_query if user_query else "General advice"}
+    Focus on:
+    - Best colors
+    - Key styles
+    - Quick makeup tips
+    
+    Keep the response under 1500 characters.
+    Question: {user_query if user_query else "General advice"}
     """
     response = llm.complete(base_prompt)
-    return response.text
+    return response.text[:1500]  # Ensure response is truncated
 
 
-col1, col2, col3 = st.columns([1,3,1])
-with col2:
-    st.image("logo_1.svg", width=300)  # Make sure "logo_1.svg" is in your directory
-    st.title("Haute-U AR Technologies")
-    st.subheader("AI-Powered Fashion & Skin Analysis")
+# Main UI
+st.image("logo.png", width=25)
+st.markdown("""
+    <div class="header-container">
+        <img>
+        <h1>Hue Style AI</h1>
+       
+            Powered by Haute-U AR technologies
+    </div>
+""", unsafe_allow_html=True)
 
-# Single Tab Content (Combined Skin Analysis and Fashion Consultation)
-uploaded_file = st.file_uploader("Upload a clear photo of your face", type=["jpg", "png", "jpeg"])
+if not st.session_state.image_uploaded:
+    uploaded_file = st.file_uploader("Upload a clear photo of your face", type=["jpg", "png", "jpeg"])
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        if image.mode in ["RGBA", "P"]:
+            image = image.convert("RGB")
+        st.session_state.image_uploaded = True
+        st.session_state.current_image = image
+        st.rerun()
 
-if uploaded_file:
-    image = Image.open(uploaded_file)
-    if image.mode in ["RGBA", "P"]:
-        image = image.convert("RGB")
-
+if st.session_state.image_uploaded:
     col1, col2 = st.columns(2)
     with col1:
-        st.image(image, caption="Original Image", use_container_width=True)
+        st.image(st.session_state.current_image, caption="Original Image", use_container_width=True)
 
     if st.session_state.get("skin_analysis") is None:
-        with st.spinner("✨ Analyzing your skin characteristics..."):
+        with st.spinner("Analyzing..."):
             try:
-                analysis, marked_img = get_skin_analysis(image)
+                analysis, marked_img = get_skin_analysis(st.session_state.current_image)
                 if analysis:
                     st.session_state.skin_analysis = analysis
                     st.session_state.marked_image = marked_img
                 else:
-                    st.error("No face detected. Please upload a clearer image.")
+                    st.error("No face detected. Please try again.")
+                    st.session_state.image_uploaded = False
             except Exception as e:
-                st.error(f"Error during analysis: {str(e)}")
+                st.error(f"Error: {str(e)}")
+                st.session_state.image_uploaded = False
 
     with col2:
         if st.session_state.get("marked_image"):
-            st.image(st.session_state.marked_image, caption="Analysis Results", use_container_width=True)
+            st.image(st.session_state.marked_image, caption="Analysis", use_container_width=True)
 
     if st.session_state.get("skin_analysis"):
         st.markdown("""
-            <div style="background-color: white; padding: 20px; border-radius: 10px; margin-top: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h3 style="color: #FF1493; margin-bottom: 15px;">Your Skin Analysis Results 🔍</h3>
+            <div style="background-color: white; padding: 15px; margin-top: 20px;">
+                <h3>Analysis Results</h3>
+            </div>
         """, unsafe_allow_html=True)
 
         st.markdown(f"""
-            <div style="background-color: #FFF0F5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px;">
                 {st.session_state.skin_analysis}
             </div>
         """, unsafe_allow_html=True)
 
-        # Fashion Consultation Section (Directly below Skin Analysis)
-        st.markdown("<h3 style='color: #FF1493;'>Fashion Consultation</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>Fashion Consultation</h3>", unsafe_allow_html=True)
 
-        for message in st.session_state.get("chat_history", []):
-            role = "You" if message["role"] == "user" else "AI Fashion Stylist"
+        for message in st.session_state.chat_history:
+            role = "You" if message["role"] == "user" else "AI Stylist"
             css_class = "user-message" if message["role"] == "user" else "ai-message"
             st.markdown(f"""
                 <div class="chat-message {css_class}">
@@ -249,35 +276,24 @@ if uploaded_file:
                 </div>
             """, unsafe_allow_html=True)
 
-        user_input = st.text_input("Ask your fashion stylist:", key="user_input")
-        if st.button("Get Recommendations 👗"):
+        user_input = st.text_input("Ask your stylist:", key="user_input")
+        if st.button("Get Advice"):
             if user_input:
-                with st.spinner("Creating your personalized recommendations..."):
+                with st.spinner("Creating recommendations..."):
                     response = get_fashion_recommendations(st.session_state.skin_analysis, user_input)
-                    st.session_state.chat_history = st.session_state.get("chat_history", []) + [
-                        {"role": "user", "content": user_input},
+                    st.session_state.chat_history.append(
+                        {"role": "user", "content": user_input}
+                    )
+                    st.session_state.chat_history.append(
                         {"role": "assistant", "content": response}
-                    ]
-                st.rerun()  # Rerun to display new messages
+                    )
+                st.rerun()
 
-st.markdown('</div>', unsafe_allow_html=True) # Close "main" div
-
-# Enhanced Tips Section (same as before)
-with st.expander("✨ Pro Tips for Best Results"):
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        ### Photo Tips
-        - 📸 Use natural lighting
-        - 🎯 Center your face in the frame
-        - 🧴 Clean, makeup-free skin
-        - 📏 Keep about 2 feet distance
-        """)
-    with col2:
-        st.markdown("""
-        ### Consultation Tips
-        - 👗 Specify your style preferences
-        - 🎨 Mention color preferences
-        - 📅 Include occasion details
-        - 💭 Share specific concerns
-        """)
+# Simplified Tips
+with st.expander("Tips"):
+    st.markdown("""
+    - Use natural lighting
+    - Center your face
+    - Clean, makeup-free skin
+    - Keep ~2 feet distance
+    """)
