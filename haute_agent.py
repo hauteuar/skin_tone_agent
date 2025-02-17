@@ -146,7 +146,6 @@ def detect_and_mark_dark_spots(image):
 
     return image_with_spots, len(dark_spots)
 
-
 def analyze_skin_tone(image):
     """Analyze skin tone and map it to color palette recommendations."""
     img_rgb = np.array(image)
@@ -159,7 +158,7 @@ def analyze_skin_tone(image):
     boxes, _ = mtcnn.detect(image)
     if boxes is None:
         return None, None
-    
+
     # Get face region
     box = boxes[0]
     x, y, w, h = [int(coord) for coord in box]
@@ -173,31 +172,12 @@ def analyze_skin_tone(image):
     face_lab = cv2.cvtColor(face_region, cv2.COLOR_RGB2LAB)
     face_ycrcb = cv2.cvtColor(face_region, cv2.COLOR_RGB2YCrCb)
     
-    # Calculate average values in different color spaces
+    # Calculate average values
     hsv_means = cv2.mean(face_hsv)
     lab_means = cv2.mean(face_lab)
     ycrcb_means = cv2.mean(face_ycrcb)
     
-    # Draw analysis regions on face
-    draw.rectangle([x, y, w, h], outline="green", width=2)
-    
-    # Sample key areas of face for tone variation
-    cheek_left = face_region[int((h-y)*0.4):int((h-y)*0.6), 
-                            int((w-x)*0.1):int((w-x)*0.3)]
-    cheek_right = face_region[int((h-y)*0.4):int((h-y)*0.6), 
-                             int((w-x)*0.7):int((w-x)*0.9)]
-    forehead = face_region[int((h-y)*0.1):int((h-y)*0.3), 
-                          int((w-x)*0.3):int((w-x)*0.7)]
-    
-    # Calculate average RGB values for key areas
-    avg_tone = np.mean([
-        np.mean(cheek_left, axis=(0,1)),
-        np.mean(cheek_right, axis=(0,1)),
-        np.mean(forehead, axis=(0,1))
-    ], axis=0)
-    
-    # Determine undertone based on color analysis
-    # Using LAB color space for better undertone detection
+    # Determine undertone based on LAB color space
     a_value = lab_means[1]  # Red-Green
     b_value = lab_means[2]  # Blue-Yellow
     
@@ -222,18 +202,10 @@ def analyze_skin_tone(image):
         tone_category = "deep"
     
     # Draw analysis indicators
+    draw.rectangle([x, y, w, h], outline="green", width=2)
     text_y = y - 20
     draw.text((x, text_y), f"Tone: {tone_category}", fill="black")
     draw.text((x, text_y + 15), f"Undertone: {undertone}", fill="black")
-    
-    # Prepare analysis data
-    analysis_data = {
-        'tone_category': tone_category,
-        'undertone': undertone,
-        'luminance': luminance,
-        'rgb_values': avg_tone.tolist(),
-        'lab_values': lab_means,
-    }
     
     # Generate analysis prompt
     analysis_prompt = f"""
@@ -249,28 +221,31 @@ def analyze_skin_tone(image):
     """
     
     response = llm.complete(analysis_prompt)
-    return response.text, result_image, analysis_data
+    return response.text, result_image
 
-def get_fashion_recommendations(analysis_data, user_query=None):
-    """Generate specific fashion advice based on skin tone analysis."""
+def get_skin_analysis(image):
+    """Wrapper function to maintain compatibility with existing code."""
+    return analyze_skin_tone(image)
+
+def get_fashion_recommendations(skin_analysis, user_query=None):
+    """Generate fashion advice based on skin analysis and user input."""
     base_prompt = f"""
-    As a luxury fashion consultant, provide specific recommendations for a person with:
-    - Skin Tone: {analysis_data['tone_category']}
-    - Undertone: {analysis_data['undertone']}
+    Based on the previous skin tone analysis:
+    {skin_analysis}
     
-    Question: {user_query if user_query else "What colors and styles would suit me best?"}
+    Provide specific recommendations for the following query:
+    {user_query if user_query else "What colors and styles would suit me best?"}
     
-    Focus your response on:
+    Focus on:
     1. Specific color recommendations for clothing
     2. Best fabric textures and patterns
     3. Makeup color palette suggestions
     4. Accessory recommendations (jewelry metals, etc.)
     
-    Keep the response concise and specific to their skin tone characteristics.
+    Keep the response concise and practical.
     """
     response = llm.complete(base_prompt)
     return response.text[:1500]
-
 # Main UI
 st.image("logo.png", width=25)
 st.markdown("""
@@ -300,7 +275,7 @@ if st.session_state.image_uploaded:
     if st.session_state.get("skin_analysis") is None:
         with st.spinner("Analyzing..."):
             try:
-                analysis, marked_img = analyze_skin_tone(st.session_state.current_image)
+                analysis, marked_img = get_skin_analysis(st.session_state.current_image)
                 if analysis:
                     st.session_state.skin_analysis = analysis
                     st.session_state.marked_image = marked_img
