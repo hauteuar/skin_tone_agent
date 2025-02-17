@@ -300,7 +300,7 @@ if st.session_state.image_uploaded:
     if st.session_state.get("skin_analysis") is None:
         with st.spinner("Analyzing..."):
             try:
-                analysis, marked_img = get_skin_analysis(st.session_state.current_image)
+                analysis, marked_img = analyze_skin_tone(st.session_state.current_image)
                 if analysis:
                     st.session_state.skin_analysis = analysis
                     st.session_state.marked_image = marked_img
