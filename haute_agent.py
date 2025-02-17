@@ -152,7 +152,7 @@ def analyze_skin_tone(image):
     
     # Create result image for visualization
     result_image = Image.fromarray(img_rgb)
-    draw = ImageDraw.Draw(result_image)
+    draw = ImageDraw.Draw(result_image, 'RGBA')  # Create draw object with RGBA support
     
     # Face detection
     boxes, _ = mtcnn.detect(image)
@@ -203,16 +203,16 @@ def analyze_skin_tone(image):
     
     # Draw analysis indicators with improved visibility
     # Draw face rectangle
-    draw.rectangle([x, y, w, h], outline="#00ff00", width=2)  # Bright green outline
+    draw.rectangle([x, y, w, h], outline=(0, 255, 0, 255), width=2)  # Bright green outline
     
     # Function to draw text with background
-    def draw_text_with_background(draw, text, position, text_color="#ffffff", bg_color="#000000"):
+    def draw_text_with_background(draw, text, position):
         # Get text size
         text_width = draw.textlength(text)
         text_height = 20  # Approximate height
         padding = 5
         
-        # Draw background rectangle
+        # Draw background rectangle with semi-transparent black
         draw.rectangle(
             [
                 position[0] - padding,
@@ -220,28 +220,24 @@ def analyze_skin_tone(image):
                 position[0] + text_width + padding,
                 position[1] + text_height + padding
             ],
-            fill=bg_color
+            fill=(0, 0, 0, 180)  # Semi-transparent black using RGBA
         )
         
-        # Draw text
-        draw.text(position, text, fill=text_color)
+        # Draw white text
+        draw.text(position, text, fill=(255, 255, 255, 255))  # White text
     
     # Draw analysis text with background
     text_y = y - 25
     draw_text_with_background(
         draw,
         f"Tone: {tone_category}",
-        (x, text_y),
-        text_color="#ffffff",  # White text
-        bg_color="rgba(0, 0, 0, 0.7)"  # Semi-transparent black background
+        (x, text_y)
     )
     
     draw_text_with_background(
         draw,
         f"Undertone: {undertone}",
-        (x, text_y + 25),
-        text_color="#ffffff",  # White text
-        bg_color="rgba(0, 0, 0, 0.7)"  # Semi-transparent black background
+        (x, text_y + 25)
     )
     
     # Generate analysis prompt with structured output
