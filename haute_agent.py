@@ -147,65 +147,129 @@ def detect_and_mark_dark_spots(image):
     return image_with_spots, len(dark_spots)
 
 
-def get_skin_analysis(image):
-    """Analyze skin and generate a detailed report."""
-    img_array = np.array(image)
+def analyze_skin_tone(image):
+    """Analyze skin tone and map it to color palette recommendations."""
+    img_rgb = np.array(image)
+    
+    # Create result image for visualization
+    result_image = Image.fromarray(img_rgb)
+    draw = ImageDraw.Draw(result_image)
     
     # Face detection
     boxes, _ = mtcnn.detect(image)
     if boxes is None:
         return None, None
-
-    # Crop face
+    
+    # Get face region
     box = boxes[0]
     x, y, w, h = [int(coord) for coord in box]
-    face_region = img_array[y:h, x:w]
-
+    face_region = img_rgb[y:h, x:w]
+    
     if face_region.shape[0] == 0 or face_region.shape[1] == 0:
         return None, None
-
-    # Convert to HSV and YCrCb
+    
+    # Convert to different color spaces for analysis
     face_hsv = cv2.cvtColor(face_region, cv2.COLOR_RGB2HSV)
+    face_lab = cv2.cvtColor(face_region, cv2.COLOR_RGB2LAB)
     face_ycrcb = cv2.cvtColor(face_region, cv2.COLOR_RGB2YCrCb)
-
-    # Get average color values
+    
+    # Calculate average values in different color spaces
     hsv_means = cv2.mean(face_hsv)
+    lab_means = cv2.mean(face_lab)
     ycrcb_means = cv2.mean(face_ycrcb)
-
-    # Detect and mark dark spots
-    marked_image, dark_spots_count = detect_and_mark_dark_spots(image)
-
-    # Generate analysis
+    
+    # Draw analysis regions on face
+    draw.rectangle([x, y, w, h], outline="green", width=2)
+    
+    # Sample key areas of face for tone variation
+    cheek_left = face_region[int((h-y)*0.4):int((h-y)*0.6), 
+                            int((w-x)*0.1):int((w-x)*0.3)]
+    cheek_right = face_region[int((h-y)*0.4):int((h-y)*0.6), 
+                             int((w-x)*0.7):int((w-x)*0.9)]
+    forehead = face_region[int((h-y)*0.1):int((h-y)*0.3), 
+                          int((w-x)*0.3):int((w-x)*0.7)]
+    
+    # Calculate average RGB values for key areas
+    avg_tone = np.mean([
+        np.mean(cheek_left, axis=(0,1)),
+        np.mean(cheek_right, axis=(0,1)),
+        np.mean(forehead, axis=(0,1))
+    ], axis=0)
+    
+    # Determine undertone based on color analysis
+    # Using LAB color space for better undertone detection
+    a_value = lab_means[1]  # Red-Green
+    b_value = lab_means[2]  # Blue-Yellow
+    
+    if a_value > 128:
+        undertone = "warm"
+    elif a_value < 128 and b_value > 128:
+        undertone = "neutral"
+    else:
+        undertone = "cool"
+    
+    # Determine skin tone category based on luminance
+    luminance = ycrcb_means[0]
+    if luminance > 200:
+        tone_category = "fair"
+    elif luminance > 170:
+        tone_category = "light"
+    elif luminance > 140:
+        tone_category = "medium"
+    elif luminance > 110:
+        tone_category = "tan"
+    else:
+        tone_category = "deep"
+    
+    # Draw analysis indicators
+    text_y = y - 20
+    draw.text((x, text_y), f"Tone: {tone_category}", fill="black")
+    draw.text((x, text_y + 15), f"Undertone: {undertone}", fill="black")
+    
+    # Prepare analysis data
+    analysis_data = {
+        'tone_category': tone_category,
+        'undertone': undertone,
+        'luminance': luminance,
+        'rgb_values': avg_tone.tolist(),
+        'lab_values': lab_means,
+    }
+    
+    # Generate analysis prompt
     analysis_prompt = f"""
-    As a dermatologist, analyze this skin tone data:
-    - Brightness Level: {ycrcb_means[0]:.2f}
-    - Redness Level: {ycrcb_means[1]:.2f}
-    - Dark Spots Count: {dark_spots_count}
-
-    Provide an expert skin tone assessment and suitable fashion recommendations.
+    As a luxury fashion consultant, analyze this skin tone data:
+    - Skin Tone Category: {tone_category}
+    - Undertone: {undertone}
+    - Brightness Level: {luminance:.2f}
+    
+    Provide personalized fashion and makeup recommendations focusing on:
+    1. Most flattering clothing colors
+    2. Jewelry metals that complement
+    3. Makeup color palette suggestions
     """
+    
     response = llm.complete(analysis_prompt)
-    return response.text, marked_image
+    return response.text, result_image, analysis_data
 
-
-def get_fashion_recommendations(skin_analysis, user_query=None):
-    """Generate fashion advice based on skin analysis and user input."""
+def get_fashion_recommendations(analysis_data, user_query=None):
+    """Generate specific fashion advice based on skin tone analysis."""
     base_prompt = f"""
-    As a luxury fashion consultant, provide concise recommendations based on this skin tone analysis:
+    As a luxury fashion consultant, provide specific recommendations for a person with:
+    - Skin Tone: {analysis_data['tone_category']}
+    - Undertone: {analysis_data['undertone']}
     
-    {skin_analysis}
-
-    Focus on:
-    - Best colors
-    - Key styles
-    - Quick makeup tips
+    Question: {user_query if user_query else "What colors and styles would suit me best?"}
     
-    Keep the response under 1500 characters.
-    Question: {user_query if user_query else "General advice"}
+    Focus your response on:
+    1. Specific color recommendations for clothing
+    2. Best fabric textures and patterns
+    3. Makeup color palette suggestions
+    4. Accessory recommendations (jewelry metals, etc.)
+    
+    Keep the response concise and specific to their skin tone characteristics.
     """
     response = llm.complete(base_prompt)
-    return response.text[:1500]  # Ensure response is truncated
-
+    return response.text[:1500]
 
 # Main UI
 st.image("logo.png", width=25)
