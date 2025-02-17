@@ -201,23 +201,72 @@ def analyze_skin_tone(image):
     else:
         tone_category = "deep"
     
-    # Draw analysis indicators
-    draw.rectangle([x, y, w, h], outline="green", width=2)
-    text_y = y - 20
-    draw.text((x, text_y), f"Tone: {tone_category}", fill="black")
-    draw.text((x, text_y + 15), f"Undertone: {undertone}", fill="black")
+    # Draw analysis indicators with improved visibility
+    # Draw face rectangle
+    draw.rectangle([x, y, w, h], outline="#00ff00", width=2)  # Bright green outline
     
-    # Generate analysis prompt
+    # Function to draw text with background
+    def draw_text_with_background(draw, text, position, text_color="#ffffff", bg_color="#000000"):
+        # Get text size
+        text_width = draw.textlength(text)
+        text_height = 20  # Approximate height
+        padding = 5
+        
+        # Draw background rectangle
+        draw.rectangle(
+            [
+                position[0] - padding,
+                position[1] - padding,
+                position[0] + text_width + padding,
+                position[1] + text_height + padding
+            ],
+            fill=bg_color
+        )
+        
+        # Draw text
+        draw.text(position, text, fill=text_color)
+    
+    # Draw analysis text with background
+    text_y = y - 25
+    draw_text_with_background(
+        draw,
+        f"Tone: {tone_category}",
+        (x, text_y),
+        text_color="#ffffff",  # White text
+        bg_color="rgba(0, 0, 0, 0.7)"  # Semi-transparent black background
+    )
+    
+    draw_text_with_background(
+        draw,
+        f"Undertone: {undertone}",
+        (x, text_y + 25),
+        text_color="#ffffff",  # White text
+        bg_color="rgba(0, 0, 0, 0.7)"  # Semi-transparent black background
+    )
+    
+    # Generate analysis prompt with structured output
     analysis_prompt = f"""
-    As a luxury fashion consultant, analyze this skin tone data:
-    - Skin Tone Category: {tone_category}
-    - Undertone: {undertone}
-    - Brightness Level: {luminance:.2f}
-    
-    Provide personalized fashion and makeup recommendations focusing on:
-    1. Most flattering clothing colors
-    2. Jewelry metals that complement
-    3. Makeup color palette suggestions
+    Based on the facial analysis, here are your skin characteristics and personalized recommendations:
+
+    SKIN ANALYSIS:
+    Your face exhibits a {tone_category} skin tone with {undertone} undertones.
+    Brightness Level: {luminance:.2f}
+
+    PERSONALIZED RECOMMENDATIONS:
+
+    1. Most Flattering Clothing Colors:
+    [Provide 4-5 specific color recommendations based on the {tone_category} tone and {undertone} undertone]
+
+    2. Complementary Jewelry Metals:
+    [List 2-3 best metal choices for this skin tone]
+
+    3. Makeup Color Palette:
+    - Foundation undertone should be: [specify]
+    - Best lipstick shades: [list 2-3 specific shades]
+    - Ideal blush colors: [specify]
+    - Eyeshadow recommendations: [list 2-3 color families]
+
+    Please provide these recommendations in a clear, structured format.
     """
     
     response = llm.complete(analysis_prompt)
