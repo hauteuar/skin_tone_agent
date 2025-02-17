@@ -148,7 +148,7 @@ def detect_and_mark_dark_spots(image):
 
 
 def get_skin_analysis(image):
-    """Analyze skin and generate a detailed report on skintone."""
+    """Analyze skin and generate a detailed report."""
     img_array = np.array(image)
     
     # Face detection
@@ -182,16 +182,16 @@ def get_skin_analysis(image):
     - Redness Level: {ycrcb_means[1]:.2f}
     - Dark Spots Count: {dark_spots_count}
 
-    Provide an expert skintone assessment and suitable skincare recommendations.
+    Provide an expert skin tone assessment and suitable fashion recommendations.
     """
     response = llm.complete(analysis_prompt)
     return response.text, marked_image
 
 
 def get_fashion_recommendations(skin_analysis, user_query=None):
-    """Generate fashion advice based on skintone analysis and user input."""
+    """Generate fashion advice based on skin analysis and user input."""
     base_prompt = f"""
-    As a luxury fashion consultant, provide concise recommendations based on this skintone  analysis:
+    As a luxury fashion consultant, provide concise recommendations based on this skin tone analysis:
     
     {skin_analysis}
 
