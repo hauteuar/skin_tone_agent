@@ -99,12 +99,8 @@ if st.session_state.image_uploaded:
 
 # Load environment variables and initialize APIs
 load_dotenv()
-groq_api_key = os.getenv("GROQ_API_KEY")
-if not groq_api_key:
-    st.error("Please set your Groq API key in the environment variables (GROQ_API_KEY)")
-    st.stop()
 
-llm = Groq(model="mixtral-8x7b-32768", api_key=groq_api_key)
+llm = Groq(model="mixtral-8x7b-32768", api_key=st.secrets["GROQ_API_KEY"])
 Settings.llm = llm
 
 # Initialize MediaPipe Face Mesh and MTCNN
