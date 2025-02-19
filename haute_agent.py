@@ -20,21 +20,21 @@ st.set_page_config(
 st.markdown("""
     <style>
     .stApp {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
     }
     .main {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
         padding: 1rem;
     }
     .stButton>button {
-        background-color: #000000;
-        color: white;
+        background-color: #000000 !important;
+        color: white !important;
         border-radius: 4px;
         padding: 0.5rem 1.5rem;
         border: none;
     }
     .stButton>button:hover {
-        background-color: #333333;
+        background-color: #333333 !important;
     }
     .uploadedFile {
         border: 1px solid #000000;
@@ -42,7 +42,7 @@ st.markdown("""
         padding: 8px;
     }
     h1, h2, h3 {
-        color: #000000;
+        color: #000000 !important;
         font-family: 'Helvetica Neue', sans-serif;
     }
     .chat-message {
@@ -51,10 +51,12 @@ st.markdown("""
         margin: 0.5rem 0;
     }
     .user-message {
-        background-color: #f5f5f5;
+        background-color: #f5f5f5 !important;
+        color: black !important;
     }
     .ai-message {
-        background-color: #f0f0f0;
+        background-color: #f0f0f0 !important;
+        color: black !important;
     }
     .reset-button {
         position: fixed;
@@ -75,7 +77,7 @@ st.markdown("""
         margin: 0 !important;
         padding: 0 !important;
     }
-    </style>
+</style>
 """, unsafe_allow_html=True)
 
 # Initialize session state
