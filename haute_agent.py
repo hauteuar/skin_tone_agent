@@ -341,7 +341,7 @@ if st.session_state.image_uploaded:
         """, unsafe_allow_html=True)
 
         st.markdown(f"""
-            <div style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px;">
+            <div style="background-color: #f8f9fa;font-color: black; padding: 15px; margin-bottom: 20px;">
                 {st.session_state.skin_analysis}
             </div>
         """, unsafe_allow_html=True)
